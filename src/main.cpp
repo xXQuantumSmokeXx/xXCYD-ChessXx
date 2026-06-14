@@ -619,11 +619,11 @@ static bool hitBoard(int &sq) {
 
 // ── Serial capture ───────────────────────────────────────────────────────
 static void handleSerialCapture() {
-    TFT_eSprite spr(&tft); spr.setColorDepth(8);
-    uint8_t *fb=(uint8_t*)spr.createSprite(SCREEN_W,SCREEN_H);
+    TFT_eSprite spr(&tft); spr.setColorDepth(16);
+    uint16_t *fb=(uint16_t*)spr.createSprite(SCREEN_W,SCREEN_H);
     if (!fb) { Serial.print("OOM:"); Serial.println(ESP.getMaxAllocHeap()); return; }
     auto *pv=disp; disp=&spr; redrawAll(); disp=pv;
-    Serial.print("RGB332:"); Serial.write(fb,SCREEN_W*SCREEN_H); Serial.flush();
+    Serial.print("RGB565:"); Serial.write((uint8_t*)fb,SCREEN_W*SCREEN_H*2); Serial.flush();
     spr.deleteSprite();
 }
 

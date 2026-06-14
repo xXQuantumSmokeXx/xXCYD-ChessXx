@@ -181,7 +181,7 @@ def capture(port, screen, outfile):
 
         ser.write(b"S")
         ser.flush()
-        marker, _ = wait_for_marker(ser, [b"RGB332:", b"OOM:"], timeout=20)
+        marker, _ = wait_for_marker(ser, [b"RGB565:", b"OOM:"], timeout=20)
 
         if marker is None:
             raise RuntimeError("No screenshot response from device.")
@@ -190,7 +190,7 @@ def capture(port, screen, outfile):
             raise RuntimeError(f"Device out of RAM: {info}")
 
         start = time.time()
-        total = W * H
+        total = W * H * 2  # 16-bit per pixel
         data = read_exact(ser, total)
         if len(data) < total:
             raise RuntimeError(f"Transfer stalled at {len(data)}/{total} bytes.")
@@ -199,18 +199,21 @@ def capture(port, screen, outfile):
     finally:
         ser.close()
 
-    # RGB332 → 24-bit BGR (BMP format)
+    # RGB565 → 24-bit BGR (BMP format)
     pixels = bytearray(W * H * 3)
-    for i, c in enumerate(data):
-        r3 = (c >> 5) & 0x07
-        g3 = (c >> 2) & 0x07
-        b2 = c & 0x03
-        r8 = (r3 << 5) | (r3 << 2) | (r3 >> 1)
-        g8 = (g3 << 5) | (g3 << 2) | (g3 >> 1)
-        b8 = (b2 << 6) | (b2 << 4) | (b2 << 2) | b2
-        pixels[i * 3 + 0] = b8
-        pixels[i * 3 + 1] = g8
-        pixels[i * 3 + 2] = r8
+    for i in range(W * H):
+        lo = data[i*2]
+        hi = data[i*2+1]
+        c = (hi << 8) | lo
+        r5 = (c >> 11) & 0x1F
+        g6 = (c >> 5) & 0x3F
+        b5 = c & 0x1F
+        r8 = (r5 << 3) | (r5 >> 2)
+        g8 = (g6 << 2) | (g6 >> 4)
+        b8 = (b5 << 3) | (b5 >> 2)
+        pixels[i*3+0] = b8
+        pixels[i*3+1] = g8
+        pixels[i*3+2] = r8
 
     write_png(outfile, pixels)
     print(f"Saved {outfile}")
