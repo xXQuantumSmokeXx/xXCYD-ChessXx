@@ -9,13 +9,11 @@ Full chess game with AI opponent for the ESP32 CYD (Cheap Yellow Display). Built
 - **Complete chess rules** — castling, en passant, pawn promotion
 - **AI opponent** — minimax with alpha-beta pruning, material + piece-square evaluation
 - **Touch-based play** — tap to select, tap destination to move
-- **30×30 pixel-art pieces** — real chess piece bitmaps rendered as themed outlines with black faces
 - **Dual theme system** — 9 accent colors for the board/UI, 6 independent colors for AI pieces
 - **Game persistence** — board state survives power cycles via NVS
 - **Captured pieces display** — left panel shows taken/lost pieces
 - **Check/Checkmate flash** — center-screen pulse animation
 - **2USB calibration** — interactive display + touch calibration on first boot
-- **Serial screenshot capture** — RGB332 protocol
 - **Deep sleep** — tap power button (top-right) to sleep, touch to wake
 
 ## Hardware
@@ -30,7 +28,7 @@ Full chess game with AI opponent for the ESP32 CYD (Cheap Yellow Display). Built
 | Board | Firmware |
 |-------|----------|
 | ESP32-32E (1-USB) | `CYD-Chess-1usb.bin` |
-| 2USB | `CYD-Chess-2usb.bin` |
+| CYD 2USB (all variants) | `CYD-Chess-2usb.bin` |
 
 Merged images — flash at offset `0x00`:
 ```bash
