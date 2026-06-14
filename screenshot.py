@@ -29,7 +29,7 @@ except ImportError:
     sys.exit(1)
 
 BAUD = 115200
-DEFAULT_PORT = "COM11"
+DEFAULT_PORT = "COM10"
 W, H = 320, 240
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -39,7 +39,7 @@ COM_RE = re.compile(r"^COM\d+$", re.IGNORECASE)
 def looks_like_output(value):
     if not value:
         return False
-    return any(ch in value for ch in "\/.") or value.lower().endswith(("bmp", "png", "raw"))
+    return any(ch in value for ch in "/.") or value.lower().endswith(("bmp", "png", "raw"))
 
 
 def parse_args(argv):
