@@ -2,6 +2,8 @@
 
 Full chess game with AI opponent for the ESP32 CYD (Cheap Yellow Display). Built on the same hardware layer as [CYD-Poker](https://github.com/xXQuantumSmokeXx/CYD-Poker).
 
+![CYD-Chess Screenshot](screenshot.png)
+
 ## Features
 
 - **Complete chess rules** — castling, en passant, pawn promotion
