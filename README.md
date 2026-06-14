@@ -1,4 +1,4 @@
-# CYD-Chess
+# xXCYD-ChessXx
 
 Full chess game with AI opponent for the ESP32 CYD (Cheap Yellow Display). Built on the same hardware layer as [CYD-Poker](https://github.com/xXQuantumSmokeXx/CYD-Poker).
 
