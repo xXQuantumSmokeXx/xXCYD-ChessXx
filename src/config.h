@@ -89,7 +89,7 @@
 #define COL_AMBER       0xFD40u
 
 // Board squares — very dark
-#define COL_LIGHT_SQ    0x1082    // dark gray (was 0x2104)
+#define COL_LIGHT_SQ    0x1082    // near-black
 #define COL_DARK_SQ     0x0000    // pure black
 #define COL_SELECTED    0xA124    // amber
 #define COL_LEGAL_MOVE  0x2C44
