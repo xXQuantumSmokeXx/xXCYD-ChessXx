@@ -1,19 +1,17 @@
 r"""
-CYD-ScreenCapture — no-reset serial screenshot capture for ESP32 CYD projects.
+CYD-Chess screenshot capture.
 
-Double-click: choose a screen from the menu, then capture it.
+Double-click: captures the current screen.
 Command line:
-  python screenshot.py [COM_PORT] [SCREEN] [OUTPUT_FILE]
+  python screenshot.py [COM_PORT] [OUTPUT_FILE]
 
 Examples:
   python screenshot.py
-  python screenshot.py COM11 0
-  python screenshot.py COM11 8 scanner.png
-  python screenshot.py solar.png
+  python screenshot.py COM11
+  python screenshot.py COM11 ScreenShots\chess.bmp
+  python screenshot.py COM11 gameplay.bmp
 
-The SCREEN argument can be a raw number (0-9) or a named screen if your
-project defines them. The target firmware maps byte commands however it wants.
-Default port: COM11
+Default port: auto-detect (falls back to COM11)
 """
 
 import os
@@ -29,34 +27,65 @@ except ImportError:
     sys.exit(1)
 
 BAUD = 115200
-DEFAULT_PORT = "COM10"
 W, H = 320, 240
+
+
+def list_ports():
+    """Return list of (device, description) tuples (serial + fallback via Windows registry)."""
+    ports = []
+    try:
+        import serial.tools.list_ports
+        ports = [(p.device, p.description) for p in serial.tools.list_ports.comports()]
+    except Exception:
+        pass
+
+    # Fallback: scan Windows registry for CH340 / CP210 devices that pyserial might miss
+    if not ports or len(ports) <= 1:
+        try:
+            import winreg
+            reg = winreg.ConnectRegistry(None, winreg.HKEY_LOCAL_MACHINE)
+            key = winreg.OpenKey(reg, r"HARDWARE\DEVICEMAP\SERIALCOMM")
+            i = 0
+            while True:
+                try:
+                    name, value, _ = winreg.EnumValue(key, i)
+                    existing = [p[0] for p in ports]
+                    if value not in existing:
+                        ports.append((value, name))
+                    i += 1
+                except OSError:
+                    break
+        except Exception:
+            pass
+
+    return ports
+
+
+def find_port():
+    """Auto-detect CYD serial port, or fall back to COM11."""
+    ports = list_ports()
+    for device, desc in ports:
+        if any(x in (desc or "") for x in ["CH340", "CP210", "USB-SERIAL", "USB Serial"]):
+            return device
+    # Fall back to first available COM port (not COM1 usually)
+    for device, desc in ports:
+        if device != "COM1":
+            return device
+    return "COM11"
+
+
+DEFAULT_PORT = find_port()
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-
 COM_RE = re.compile(r"^COM\d+$", re.IGNORECASE)
-
-
-def looks_like_output(value):
-    if not value:
-        return False
-    return any(ch in value for ch in "/.") or value.lower().endswith(("bmp", "png", "raw"))
 
 
 def parse_args(argv):
     port = DEFAULT_PORT
-    screen = None
-    outfile = None
+    outfile = "screen.bmp"
     args = list(argv)
 
     if args and COM_RE.match(args[0]):
         port = args.pop(0).upper()
-
-    if args:
-        # If it looks like a filename, treat as output
-        if looks_like_output(args[0]):
-            outfile = args.pop(0)
-        else:
-            screen = args.pop(0)
 
     if args:
         outfile = args.pop(0)
@@ -64,16 +93,23 @@ def parse_args(argv):
     if args:
         raise ValueError("Too many arguments.")
 
-    return port, screen, outfile
+    return port, outfile
 
 
 def ask_interactive():
-    print("CYD Screen Capture")
+    print("CYD-Chess Screenshot")
+    ports = list_ports()
+    if ports:
+        print("Available ports:")
+        for dev, desc in ports:
+            print(f"  {dev}: {desc}")
+    else:
+        print("No COM ports detected.")
     port = input(f"COM port [{DEFAULT_PORT}]: ").strip() or DEFAULT_PORT
-    print("\nEnter screen number (0-9) or leave blank for current screen:")
-    screen = input("Screen [current]: ").strip() or None
-    outfile = input("Output file [screenshot.png]: ").strip() or "screenshot.png"
-    return port.upper(), screen, outfile
+    print("\nNavigate to the screen you want on the device first.")
+    print("(Game board or splash screen)")
+    outfile = input("Output file [screen.bmp]: ").strip() or "screen.bmp"
+    return port.upper(), outfile
 
 
 def read_exact(ser, n, timeout=30):
@@ -104,8 +140,7 @@ def wait_for_marker(ser, markers, timeout=20):
     return None, buf
 
 
-def write_png(filename, pixels_bgr24):
-    """Write a minimal 24-bit BMP (the device sends RGB332 which we convert)."""
+def write_bmp(filename, pixels_bgr24):
     if not os.path.isabs(filename):
         filename = os.path.join(BASE_DIR, filename)
     folder = os.path.dirname(filename)
@@ -136,7 +171,6 @@ def open_serial_no_reset(port):
     ser.rtscts = False
     ser.dsrdtr = False
 
-    # Hold DTR/RTS deasserted to avoid triggering ESP32 bootloader
     ser.dtr = False
     ser.rts = False
     ser.open()
@@ -145,9 +179,21 @@ def open_serial_no_reset(port):
     return ser
 
 
-def capture(port, screen, outfile):
+def capture(port, outfile):
     print(f"Opening {port} without reset...")
-    ser = open_serial_no_reset(port)
+    try:
+        ser = open_serial_no_reset(port)
+    except serial.SerialException as e:
+        ports = list_ports()
+        if ports:
+            print(f"Error opening {port}: {e}")
+            print("Available ports:")
+            for dev, desc in ports:
+                print(f"  {dev}: {desc}")
+        else:
+            print(f"Error: Could not open {port} and no other COM ports found.")
+            print("Make sure the CYD is plugged in via USB.")
+        raise
 
     try:
         time.sleep(0.2)
@@ -162,22 +208,7 @@ def capture(port, screen, outfile):
             print("No READY reply; continuing anyway...")
 
         ser.reset_input_buffer()
-
-        if screen is not None:
-            # Accept raw numbers (0-9) or named screens
-            try:
-                n = int(screen)
-                cmd = str(n).encode()
-            except ValueError:
-                # Fallback: treat as raw byte command
-                cmd = screen.encode() if len(screen) == 1 else screen[0].encode()
-            print(f"Sending screen command: {cmd}")
-            ser.write(cmd)
-            ser.flush()
-            time.sleep(0.6)
-            ser.reset_input_buffer()
-        else:
-            print("Capturing current screen...")
+        print("Capturing screen...")
 
         ser.write(b"S")
         ser.flush()
@@ -185,21 +216,22 @@ def capture(port, screen, outfile):
 
         if marker is None:
             raise RuntimeError("No screenshot response from device.")
+
         if marker == b"OOM:":
             info = ser.readline().decode("ascii", errors="replace").strip()
-            raise RuntimeError(f"Device out of RAM: {info}")
+            raise RuntimeError(f"Device ran out of RAM while capturing: {info}")
 
         start = time.time()
         total = W * H
         data = read_exact(ser, total)
         if len(data) < total:
             raise RuntimeError(f"Transfer stalled at {len(data)}/{total} bytes.")
+
         elapsed = time.time() - start
         print(f"  Done in {elapsed:.1f}s          ")
     finally:
         ser.close()
 
-    # RGB332 → 24-bit BGR (BMP format)
     pixels = bytearray(W * H * 3)
     for i, c in enumerate(data):
         r3 = (c >> 5) & 0x07
@@ -208,11 +240,11 @@ def capture(port, screen, outfile):
         r8 = (r3 << 5) | (r3 << 2) | (r3 >> 1)
         g8 = (g3 << 5) | (g3 << 2) | (g3 >> 1)
         b8 = (b2 << 6) | (b2 << 4) | (b2 << 2) | b2
-        pixels[i*3+0] = b8
-        pixels[i*3+1] = g8
-        pixels[i*3+2] = r8
+        pixels[i * 3 + 0] = b8
+        pixels[i * 3 + 1] = g8
+        pixels[i * 3 + 2] = r8
 
-    write_png(outfile, pixels)
+    write_bmp(outfile, pixels)
     print(f"Saved {outfile}")
 
 
@@ -220,10 +252,10 @@ def main():
     interactive = len(sys.argv) == 1 and sys.stdin.isatty()
     try:
         if interactive:
-            port, screen, outfile = ask_interactive()
+            port, outfile = ask_interactive()
         else:
-            port, screen, outfile = parse_args(sys.argv[1:])
-        capture(port, screen, outfile)
+            port, outfile = parse_args(sys.argv[1:])
+        capture(port, outfile)
     except Exception as exc:
         print(f"Error: {exc}")
         if not interactive:

@@ -17,6 +17,8 @@ static TFT_eSPI    *disp = &tft;
 #include "board.h"
 #include "engine.h"
 
+uint16_t g_lightSqColor = 0x1082;  // default near-black; overridden for screenshot capture
+
 static SPIClass    touchSPI(VSPI);
 static XPT2046_Touchscreen ts(TOUCH_CS);
 
@@ -662,7 +664,13 @@ static void handleSerialCapture() {
     TFT_eSprite spr(&tft); spr.setColorDepth(8);
     uint8_t *fb=(uint8_t*)spr.createSprite(SCREEN_W,SCREEN_H);
     if (!fb) { Serial.print("OOM:"); Serial.println(ESP.getMaxAllocHeap()); return; }
+    // Temporarily brighten light squares so they survive 16-bit→8-bit RGB332
+    // truncation.  0x1082 (R=1,G=2,B=2) maps to 0x00 in 8-bit — invisible.
+    // 0x2108 (R=4,G=8,B=8) is the darkest gray with all channels ≥1 in RGB332.
+    auto oldLight = g_lightSqColor;
+    g_lightSqColor = 0x2108;
     auto *pv=disp; disp=&spr; redrawAll(); disp=pv;
+    g_lightSqColor = oldLight;
     Serial.print("RGB332:"); Serial.write(fb,SCREEN_W*SCREEN_H); Serial.flush();
     spr.deleteSprite();
 }

@@ -94,7 +94,10 @@
 #define COL_AMBER       0xFD40u
 
 // Board squares — very dark
-#define COL_LIGHT_SQ    0x1082    // near-black
+// COL_LIGHT_SQ is a runtime variable so screenshot capture can temporarily
+// brighten it — 0x1082 collapses to 0x00 in 8-bit RGB332 and vanishes.
+extern uint16_t g_lightSqColor;
+#define COL_LIGHT_SQ    g_lightSqColor
 #define COL_DARK_SQ     0x0000    // pure black
 #define COL_SELECTED    0xA124    // amber
 #define COL_LEGAL_MOVE  0x2C44
