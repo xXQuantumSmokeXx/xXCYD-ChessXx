@@ -60,6 +60,11 @@
 #define PWR_BTN_Y   10
 #define PWR_BTN_R   7
 
+// ── Undo button (under power button) ────────────────────────────────────────
+#define UNDO_BTN_X   306
+#define UNDO_BTN_Y   30
+#define UNDO_BTN_R   7
+
 // ── NEW GAME button (right panel, under turn indicator) ──────────────────
 #define BTN_W       36
 #define BTN_H       20

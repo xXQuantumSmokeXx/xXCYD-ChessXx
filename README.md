@@ -6,13 +6,14 @@ Full chess game with AI opponent for the ESP32 CYD (Cheap Yellow Display). Built
 
 ## Features
 
-- **Complete chess rules** — castling, en passant, pawn promotion
+- **Complete chess rules** — castling, en passant, pawn promotion (auto-queen)
 - **AI opponent** — minimax with alpha-beta pruning, material + piece-square evaluation
 - **Touch-based play** — tap to select, tap destination to move
+- **Undo move** — left-arrow button below power button takes back last player + AI move pair
+- **Save & resume** — press sleep (top-right) to save and deep sleep; tap to wake and resume exactly where you left off
 - **Dual theme system** — 9 accent colors for the board/UI, 6 independent colors for AI pieces
-- **Game persistence** — board state survives power cycles via NVS
 - **Captured pieces display** — left panel shows taken/lost pieces
-- **Check/Checkmate flash** — center-screen pulse animation
+- **Check/Checkmate flash** — center-screen pulse animation (800ms, doesn't overstay)
 - **2USB calibration** — interactive display + touch calibration on first boot
 - **Deep sleep** — tap power button (top-right) to sleep, touch to wake
 
@@ -52,7 +53,8 @@ pio run -e cyd_chess_2usb   # 2-USB
 - AI responds automatically
 - Bottom-right circle: cycle UI theme color
 - Bottom-left circle: cycle AI piece color
-- Top-right circle: deep sleep
+- Top-right circle: deep sleep (saves game)
+- Arrow below power button: undo last move
 
 ## Credits
 

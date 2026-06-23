@@ -43,6 +43,11 @@ static bool     g_flashMsg = false;
 static unsigned long g_flashTime = 0;
 static const char* g_flashText = "";
 
+// ── Undo history ───────────────────────────────────────────────────────────
+#define MAX_HISTORY 20
+static BoardState g_history[MAX_HISTORY];
+static int      g_historyCount = 0;
+
 // ── NVS ──────────────────────────────────────────────────────────────────
 static int32_t nvsGetInt(const char *key, int32_t def) {
     Preferences p; p.begin("cyd-chess", true);
@@ -167,6 +172,36 @@ static void goToSleep() {
     esp_deep_sleep_start();
 }
 
+// ── Undo button ──────────────────────────────────────────────────────────
+static void redrawAll();  // forward decl — defined below
+
+static void drawUndoButton() {
+    int cx = UNDO_BTN_X, cy = UNDO_BTN_Y, r = UNDO_BTN_R;
+    // Left-pointing arrow
+    int lx = cx - r;
+    int rx = cx + r;
+    disp->drawLine(lx, cy, rx, cy, g_themeColor);
+    disp->drawLine(lx, cy, lx + 3, cy - 3, g_themeColor);
+    disp->drawLine(lx, cy, lx + 3, cy + 3, g_themeColor);
+}
+static bool hitUndoButton() {
+    int dx=tx-UNDO_BTN_X, dy=ty-UNDO_BTN_Y;
+    return (dx*dx+dy*dy <= (UNDO_BTN_R+4)*(UNDO_BTN_R+4));
+}
+static void performUndo() {
+    if (g_historyCount == 0) return;
+    g_aiPending = false;
+    g_gameOver = false;
+    g_gameResult = RESULT_NONE;
+    g_historyCount--;
+    memcpy(&g_board.state, &g_history[g_historyCount], sizeof(BoardState));
+    g_selected = -1;
+    g_numLegal = 0;
+    g_hasLastMove = false;
+    redrawAll();
+    saveGame();
+}
+
 // ── Board drawing ────────────────────────────────────────────────────────
 static void drawBoard() {
     for (int r=0; r<8; r++)
@@ -272,11 +307,9 @@ static void drawRightInfo() {
         if (g_gameResult==RESULT_WHITE_WIN) {
             disp->drawString("WHITE", cx, cy-6);
             disp->drawString("WINS", cx, cy+2);
-            disp->drawString("Checkmate", cx, cy+12);
         } else if (g_gameResult==RESULT_BLACK_WIN) {
             disp->drawString("BLACK", cx, cy-6);
             disp->drawString("WINS", cx, cy+2);
-            disp->drawString("Checkmate", cx, cy+12);
         } else {
             disp->drawString("DRAW", cx, cy);
         }
@@ -369,11 +402,11 @@ static void triggerFlash(const char* msg) {
 static void drawFlashMessage() {
     if (!g_flashMsg) return;
     unsigned long elapsed = millis() - g_flashTime;
-    if (elapsed > 1500) { g_flashMsg = false; return; }
+    if (elapsed > 800) { g_flashMsg = false; return; }
     // Pulse: fade in, hold, fade out
     uint16_t col = g_themeColor;
-    if (elapsed < 200) col = COL_DIM_GRAY;       // dim at start
-    else if (elapsed > 1100) col = COL_DIM_GRAY; // dim at end
+    if (elapsed < 100) col = COL_DIM_GRAY;       // dim at start
+    else if (elapsed > 500) col = COL_DIM_GRAY;  // dim at end
     int cx = SCREEN_W/2, cy = BOARD_Y + BOARD_H/2;
     disp->setTextFont(4);
     disp->setTextColor(col, COL_BG);
@@ -422,6 +455,7 @@ static void redrawAll() {
     drawThemeIcon();
     drawAiColorIcon();
     drawPowerButton();
+    drawUndoButton();
     drawFlashMessage();
 }
 
@@ -509,6 +543,12 @@ static void handlePlayerMove(int toSquare) {
         int8_t p=g_board.state.squares[chosen.from];
         int dr=SQ_RANK(chosen.to);
         if (Board::pieceType(p)==PAWN && (dr==7||dr==0)) chosen.promo=QUEEN;
+    }
+
+    // Save state for undo before making the move
+    if (g_historyCount < MAX_HISTORY) {
+        memcpy(&g_history[g_historyCount], &g_board.state, sizeof(BoardState));
+        g_historyCount++;
     }
 
     bool ok = g_board.makeMove(chosen);
@@ -789,8 +829,8 @@ void setup() {
     themeInit();
     g_playerSide=1;
 
-    clearSavedGame();  // force fresh board — clear stale NVS state
-    g_board.setStartPos(); g_gameOver=false; g_gameResult=RESULT_NONE;
+    // Try to resume saved game (from sleep / previous session)
+    bool hasSavedGame = loadGame();
 
     tft.init();
 #if CYD_USB_VERSION==2
@@ -814,8 +854,15 @@ void setup() {
 
     displayCalibrate(); applyOrientation(); touchCalibrate();
 
-    showSplash();
-    delay(3000);
+    if (!hasSavedGame) {
+        // Fresh boot — show splash and start new game
+        g_board.setStartPos();
+        g_gameOver = false;
+        g_gameResult = RESULT_NONE;
+        showSplash();
+        delay(3000);
+    }
+    // else: resumed saved game — skip splash, go straight to board
 
     pinMode(TFT_BL,OUTPUT); digitalWrite(TFT_BL,HIGH);
 
@@ -864,8 +911,13 @@ void loop() {
         if (hitNewGame()) {
             g_board.setStartPos(); g_selected=-1; g_numLegal=0;
             g_gameOver=false; g_gameResult=RESULT_NONE; g_hasLastMove=false;
+            g_historyCount=0;
             g_statusMsg[0]=0; clearSavedGame(); redrawAll();
             Serial.println("New game"); delay(300); return;
+        }
+        if (hitUndoButton()) {
+            if (g_historyCount > 0) { performUndo(); Serial.println("Undo"); }
+            delay(200); return;
         }
     }
 
