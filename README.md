@@ -1,6 +1,6 @@
 # xXCYD-ChessXx
 
-Full chess game with AI opponent for the ESP32 CYD (Cheap Yellow Display). Built on the same hardware layer as [CYD-Poker](https://github.com/xXQuantumSmokeXx/CYD-Poker).
+Cyberpunk-themed chess with AI opponent for the ESP32 CYD. Touch play, custom piece art, dual color themes, and deep sleep — built on the CYD-Poker hardware layer.
 
 ![CYD-Chess Screenshot](Screenshot/Main-Screen.png)
 
