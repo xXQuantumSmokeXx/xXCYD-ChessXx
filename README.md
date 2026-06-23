@@ -2,7 +2,11 @@
 
 Cyberpunk-themed chess with AI opponent for the ESP32 CYD. Touch play, custom piece art, dual color themes, and deep sleep — built on the CYD-Poker hardware layer.
 
-![CYD-Chess Screenshot](Screenshot/Main-Screen.png)
+## Screens
+
+| Main Screen |
+|-------------|
+| ![Main Screen](https://raw.githubusercontent.com/xXQuantumSmokeXx/xXCYD-ChessXx/main/Screenshot/Main-Screen.png) |
 
 ## Features
 
