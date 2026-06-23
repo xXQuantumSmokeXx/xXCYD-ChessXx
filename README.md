@@ -6,7 +6,7 @@ Cyberpunk-themed chess with AI opponent for the ESP32 CYD. Touch play, custom pi
 
 | Main Screen |
 |-------------|
-| ![Main Screen](https://raw.githubusercontent.com/xXQuantumSmokeXx/xXCYD-ChessXx/main/Screenshot/Main-Screen.png) |
+| ![Main Screen](https://raw.githubusercontent.com/xXQuantumSmokeXx/xXCYD-ChessXx/master/Screenshot/Main-Screen.png) |
 
 ## Features
 
