@@ -2,6 +2,8 @@
 
 Cyberpunk-themed chess with AI opponent for the ESP32 CYD. Touch play, custom piece art, dual color themes, and deep sleep — built on the CYD-Poker hardware layer.
 
+[![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-xXSmokeXx-FFDD00?logo=buymeacoffee&logoColor=black)](https://buymeacoffee.com/xXSmokeXx)
+
 ## Screens
 
 | Main Screen |
